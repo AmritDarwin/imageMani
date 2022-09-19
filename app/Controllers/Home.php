@@ -12,62 +12,96 @@ class Home extends BaseController
     public function image()
     {
         if ($this->request->getMethod() == 'post') {
-            $rules = [
-                'name'  => 'required',
-                'email' => 'required|min_length[10]',
-                'mobile' => 'required|matches[password]',
-                'image' => 'uploaded[image]|max_size[avatar,1024]',
-            ];
-            if (!$this->validation->setRules($rules)) return $this->response->setJSON(['type' => 'error', 'message' => $this->validation->getErrors()]);
-            list($width, $height) = getimagesize(FCPATH . 'assets/bg.jpg');
-            $im = imagecreatetruecolor($width, $height) or die("cannot generate img");
-            // imagefilledrectangle($im, 0, 0, 299, 299, imagecolorallocate($im, 255, 255, 255));
-            $bg = imagecreatefromjpeg(FCPATH . 'assets/bg.jpg');
+            // $rules = [
+            //     'name'  => 'required',
+            //     'email' => 'required|min_length[10]',
+            //     'mobile' => 'required|matches[password]',
+            //     'image' => 'uploaded[image]|max_size[avatar,1024]',
+            // ];
 
-            imagecopyresampled($im, $bg, 0, 0, 0, 0, $height, $width, $height, $width);
-            $file = $this->request->getFile('image');
-            // // $file->move(FCPATH. 'assets');
-            $user = imagecreatefromjpeg($file->getRealPath());
-            $filename = $file->getRandomName();
-
-            // for text
-
-            $img = imagecreate(700, 500);
-            $white = imagecolorallocate($img, 255, 255, 255);
-
-            //transparent
-            imagealphablending($img, false);
-            $transparency = imagecolorallocatealpha($img, 0, 0, 0, 127);
-            imagefill($img, 0, 0, $transparency);
-            imagesavealpha($img, true);
-            // end transparent
-            imagefilledrectangle($img, 0, 0, 0, 0, imagecolorallocate($img, 0, 0, 0));
-
+            // if (!$this->validation->setRules($rules)) return $this->response->setJSON(['type' => 'error', 'message' => $this->validation->getErrors()]);
+            $user_width = 418;
+            $user_height = 418;
+            $text_image_height = 100;
             $text = $this->request->getPost('name');
-
-            $bbox = imagettfbbox(20, 0, FCPATH . 'fonts/OpenSans-Regular.ttf', $text) or die('Error in imagettfbbox function');
-
-            $txt_w = $bbox[4] - $bbox[0];
-            $txt_h = $bbox[3] - $bbox[1];
-            $scale = 700 / $txt_w;
-
-            $fontSize = 20 * $scale;
-
-            imagefttext($img, $fontSize, 0, $bbox[0] + 10, $bbox[1] + 100, imagecolorallocate($img, 0, 0, 0), FCPATH . 'fonts/OpenSans-Regular.ttf', $text);
-            header('Content-Type: image/jpeg');
-
-            // end text
-            // add text
-            imagecopyresampled($im, $img, 10, 10, 0, 0, 300, 100, $height, $width);
-
-            // add user img
-            imagecopyresampled($im, $user, 100, 100, 0, 0, $height * 0.50, $width * 0.50, $height, $width);
+            // base64 to img
+            $img = $this->request->getPost('image');
+            $img = str_replace('data:image/png;base64,', '', $img);
+            $img = str_replace(' ', '+', $img);
+            $data = base64_decode($img);
+            $filename = uniqid() . '.png';
+            $file = FCPATH . "assets/" . $filename;
+            file_put_contents($file, $data);
+            // base64 to img end
+            // check background dimension
+            list($width, $height) = getimagesize(FCPATH . 'assets/independence.png');
+            // create image canvas of dimension
+            $im = imagecreatetruecolor($width, $height) or die("cannot generate img");
+            // create gd image of background 
+            $bg = imagecreatefrompng(FCPATH . 'assets/independence.png');
+            // create uploaded gd image
+            $user = imagecreatefrompng(FCPATH . 'assets/' . $filename);
+            // resize user image
+            $user = $this->imageResize($filename, $user, $user_width, $user_height);
+            // add user img to canvas
+            imagecopyresampled($im, $user, 192, 181, 0, 0, $width, $height, $width, $height);
+            // add gd background image to canvas
+            imagecopyresampled($im, $bg, 0, 0, 0, 0, $width, $height, $width, $height);
+            // create new gb image for text
+            $text_im = $this->addText($text, $text_image_height, $width);
+            // add gb image with text on bg image
+            imagecopyresampled($im, $text_im, 0, $height - $text_image_height, 0, 0, $width, $height, $width, $height);
+            // save image to destination
             imagejpeg($im, FCPATH . 'assets/' . $filename);
             imagedestroy($im);
             return $this->response->setJSON(['img' => $filename]);
-            // $path = $this->image->withFile(FCPATH . 'assets/bg.jpg')->fit(100, 100, 'center')->save(FCPATH . 'assets/custom.jpg');
-            // print_r($path);
-            // die;
         }
+    }
+
+    function imageResize($filename, $image, $w, $h)
+    {
+        $oldw = imagesx($image);
+        $oldh = imagesy($image);
+        $temp = imagecreatetruecolor($w, $h);
+        imagecopyresampled($temp, $image, 0, 0, 0, 0, $w, $h, $oldw, $oldh);
+        imagepng($temp, FCPATH . 'assets/' . $filename);
+        imagedestroy($temp);
+        return $temp;
+    }
+
+    function addText($text, $h, $w)
+    {
+        // create gd image
+        $text_im = imagecreatetruecolor($w, $h);
+        //for transparent background
+        imagealphablending($text_im, false);
+        imagesavealpha($text_im, true);
+        // add transprent color to gd image
+        $col = imagecolorallocatealpha($text_im, 255, 255, 255, 127);
+        // set transprant color to image 
+        imagefill($text_im, 0, 0, $col);
+        // text info
+        $white = imagecolorallocate($text_im, 255, 255, 255); //for font color
+        $black = imagecolorallocate($text_im, 0, 0, 0); //for font color
+        $grey = imagecolorallocate($text_im, 128, 128, 128); // for shadow color
+        $font = FCPATH . "fonts/OpenSans-Regular.ttf"; //font path
+        $fontsize = 20; // size of your font
+        $x = 100; // x- position of your text
+        $y = 50; // y- position of your text
+        $angle = 0;
+        // Get Bounding Box Size
+        $text_box = imagettfbbox($fontsize, $angle, $font, $text);
+        // Get your Text Width and Height
+        $text_width = $text_box[2] - $text_box[0];
+        $text_height = $text_box[7] - $text_box[1];
+        // Calculate coordinates of the text
+        $x = round(($w / 2) - ($text_width / 2));
+        $y = round(($h / 2) - ($text_height / 2));
+        // Add some shadow to the text
+        imagettftext($text_im, $fontsize, $angle, $x + 1, $y + 1, $black, $font, $text);
+        // Add the text
+        imagettftext($text_im, $fontsize, $angle, $x, $y, $white, $font, $text);
+        imagepng($text_im, FCPATH . '/text.png');
+        return $text_im;
     }
 }
