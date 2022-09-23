@@ -107,7 +107,7 @@
                 // formData.append('email', $('#email').val());
                 // formData.append('mobile', $('#mobile').val());
                 formData.append('image', base64encodedImage);
-                axios.post('http://localhost/imageMani/image', formData).then(res => {
+                axios.post('<?= base_url() ?>/image', formData).then(res => {
                     if (res.data.img) {
                         $('#img').attr('src', '<?= base_url() ?>/public/assets/' +
                             res.data.img).removeClass('d-none');

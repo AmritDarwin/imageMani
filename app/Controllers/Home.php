@@ -4,6 +4,12 @@ namespace App\Controllers;
 
 class Home extends BaseController
 {
+
+    public function __construct()
+    {
+        $this->model = new \App\Models\Home();
+    }
+
     public function index()
     {
         return view('welcome_message');
@@ -12,6 +18,10 @@ class Home extends BaseController
     public function image()
     {
         if ($this->request->getMethod() == 'post') {
+
+            $template = $this->model->getTemplate('independence');
+            $userImageCoordinates = json_decode($template['image_coordinates']);
+            $userNameCoordinates = json_decode($template['name_coordinates']);
             // $rules = [
             //     'name'  => 'required',
             //     'email' => 'required|min_length[10]',
@@ -20,9 +30,13 @@ class Home extends BaseController
             // ];
 
             // if (!$this->validation->setRules($rules)) return $this->response->setJSON(['type' => 'error', 'message' => $this->validation->getErrors()]);
-            $user_width = 418;
-            $user_height = 418;
-            $text_image_height = 100;
+            $user_image_coordinates = [$userImageCoordinates->tl->x, $userImageCoordinates->tl->y];
+            // var_dump($user_image_coordinates);die;
+
+            $user_width = (int) $userImageCoordinates->tr->x - (int) $userImageCoordinates->tl->x;
+            $user_height = (int) $userImageCoordinates->tr->x - (int) $userImageCoordinates->tl->x;
+            $text_image_height = (int) $userNameCoordinates->bl->y - $userNameCoordinates->tl->y;
+
             $text = $this->request->getPost('name');
             // base64 to img
             $img = $this->request->getPost('image');
@@ -44,7 +58,7 @@ class Home extends BaseController
             // resize user image
             $user = $this->imageResize($filename, $user, $user_width, $user_height);
             // add user img to canvas
-            imagecopyresampled($im, $user, 192, 181, 0, 0, $width, $height, $width, $height);
+            imagecopyresampled($im, $user, $user_image_coordinates[0], $user_image_coordinates[1], 0, 0, $width, $height, $width, $height);
             // add gd background image to canvas
             imagecopyresampled($im, $bg, 0, 0, 0, 0, $width, $height, $width, $height);
             // create new gb image for text
@@ -65,7 +79,7 @@ class Home extends BaseController
         $temp = imagecreatetruecolor($w, $h);
         imagecopyresampled($temp, $image, 0, 0, 0, 0, $w, $h, $oldw, $oldh);
         imagepng($temp, FCPATH . 'assets/' . $filename);
-        imagedestroy($temp);
+        // imagedestroy($temp);
         return $temp;
     }
 
@@ -103,5 +117,51 @@ class Home extends BaseController
         imagettftext($text_im, $fontsize, $angle, $x, $y, $white, $font, $text);
         imagepng($text_im, FCPATH . '/text.png');
         return $text_im;
+    }
+
+    public function admin()
+    {
+        return view('admin/index');
+    }
+
+    public function addTemplate()
+    {
+        if ($this->request->getMethod() == 'post') {
+            $name               = $this->request->getPost('name');
+            $background         = $this->request->getFile('background');
+            $image_coordinates  = $this->request->getPost('image_coordinates');
+            $name_coordinates   = $this->request->getPost('name_coordinates');
+            $email_coordinates  = $this->request->getPost('email_coordinates');
+            $mobile_coordinates = $this->request->getPost('mobile_coordinates');
+            $text_color         = $this->request->getPost('text_color');
+
+            if (!$background->hasMoved()) {
+                $filename = $background->getName();
+                $background->move(FCPATH . 'assets/', $filename);
+
+                $data = [
+                    'name'              => $name,
+                    'background'        => $filename,
+                    'image_coordinates' => $image_coordinates,
+                    'name_coordinates'  => $name_coordinates,
+                    'email_coordinates' => $email_coordinates,
+                    'mobile_coordinates' => $mobile_coordinates,
+                    'text_color'        => $text_color,
+                    'status'            => 1,
+                    'created_at'        => date('Y-m-d H:i:s')
+                ];
+
+                if ($this->model->addTemplate($data))
+                    echo 1;
+                else
+                    echo 0;
+            }
+        }
+    }
+
+    public function getTemplate($name)
+    {
+        $template = $this->model->getTemplate($name);
+        if (empty($template)) return;
     }
 }
