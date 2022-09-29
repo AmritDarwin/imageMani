@@ -38,8 +38,12 @@ $routes->set404Override();
 $routes->get('/', 'Home::index');
 $routes->post('/image', 'Home::image');
 $routes->get('/admin', 'Home::admin');
-$routes->post('/addTemplate', 'Home::addTemplate');
+$routes->add('/admin/addTemplate', 'Home::addTemplate');
 $routes->get('/getTemplate/(:any)', 'Home::getTemplate/$1');
+$routes->get('/template/(:any)', 'Home::template/$1');
+$routes->add('/admin/template/(:any)', 'Home::admintemplate/$1');
+$routes->post('/editTemplate', 'Home::edittemplate');
+$routes->post('/admin/deleteTemplate', 'Home::deleteTemplate');
 
 /*
  * --------------------------------------------------------------------

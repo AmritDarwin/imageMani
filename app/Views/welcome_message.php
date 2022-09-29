@@ -38,7 +38,7 @@
             </form>
         </div>
         <div class="col-7 mt-5 img-div">
-            <img id="img" src="" class="d-none" alt="custom img">
+            <img id="img" src="<?= base_url() . '/public/assets/' . $details['background'] ?>" alt="custom img">
         </div>
     </div>
 
@@ -98,19 +98,19 @@
 
             $('.js-save-cropped-avatar').on('click', function(event) {
                 event.preventDefault();
+                const template = '<?= $details['name'] ?>';
                 const canvas = cropper.getCroppedCanvas();
-                console.log(canvas);
                 const base64encodedImage = canvas.toDataURL();
                 const formData = new FormData();
-                console.log(base64encodedImage);
                 formData.append('name', $('#name').val());
+                formData.append('template', template);
                 // formData.append('email', $('#email').val());
                 // formData.append('mobile', $('#mobile').val());
                 formData.append('image', base64encodedImage);
                 axios.post('<?= base_url() ?>/image', formData).then(res => {
                     if (res.data.img) {
                         $('#img').attr('src', '<?= base_url() ?>/public/assets/' +
-                            res.data.img).removeClass('d-none');
+                            res.data.img);
                         $(cropperModalId).modal("hide");
                     }
                 })

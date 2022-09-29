@@ -15,4 +15,19 @@ class Home extends Model
     {
         return $this->db->table('template')->where('name', $name)->get()->getRowArray();
     }
+
+    public function getAllImages()
+    {
+        return $this->db->table('template')->get()->getResultArray();
+    }
+
+    public function editTemplate($id, $data)
+    {
+        return $this->db->table('template')->where('id', $id)->update($data);
+    }
+
+    public function deleteTemplate($id)
+    {
+        return $this->db->table('template')->where('id', $id)->delete();
+    }
 }

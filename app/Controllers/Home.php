@@ -12,14 +12,21 @@ class Home extends BaseController
 
     public function index()
     {
-        return view('welcome_message');
+        $data['category'] = $this->model->getAllImages();
+        return view('home', $data);
+    }
+
+    public function template($name)
+    {
+        $data['details'] = $this->model->getTemplate($name);
+        return view('welcome_message', $data);
     }
 
     public function image()
     {
         if ($this->request->getMethod() == 'post') {
-
-            $template = $this->model->getTemplate('independence');
+            $template = $this->request->getPost('template');
+            $template = $this->model->getTemplate($template);
             $userImageCoordinates = json_decode($template['image_coordinates']);
             $userNameCoordinates = json_decode($template['name_coordinates']);
             // $rules = [
@@ -30,7 +37,7 @@ class Home extends BaseController
             // ];
 
             // if (!$this->validation->setRules($rules)) return $this->response->setJSON(['type' => 'error', 'message' => $this->validation->getErrors()]);
-            $user_image_coordinates = [$userImageCoordinates->tl->x, $userImageCoordinates->tl->y];
+            $user_image_coordinates = [(int)$userImageCoordinates->tl->x, (int) $userImageCoordinates->tl->y];
             // var_dump($user_image_coordinates);die;
 
             $user_width = (int) $userImageCoordinates->tr->x - (int) $userImageCoordinates->tl->x;
@@ -119,9 +126,16 @@ class Home extends BaseController
         return $text_im;
     }
 
+    public function adminTemplate($name)
+    {
+        $data['details'] = $this->model->getTemplate($name);
+        return view('admin/edittemplate', $data);
+    }
+
     public function admin()
     {
-        return view('admin/index');
+        $data['templates'] = $this->model->getAllImages();
+        return view('admin/alltemplates', $data);
     }
 
     public function addTemplate()
@@ -151,11 +165,54 @@ class Home extends BaseController
                     'created_at'        => date('Y-m-d H:i:s')
                 ];
 
-                if ($this->model->addTemplate($data))
-                    echo 1;
-                else
-                    echo 0;
+                if (empty($id)) $res = $this->model->addTemplate($data);
+                else {
+                    $data['id'] = $id;
+                    $res = $this->model->editTemplate($data);
+                }
+
+                if ($res) echo 1;
+                else echo 0;
             }
+        }
+        return view('admin/addtemplate');
+    }
+
+    public function editTemplate()
+    {
+        if ($this->request->getMethod() == 'post') {
+            $id                 = $this->request->getPost('id');
+            $name               = $this->request->getPost('name');
+            $background         = $this->request->getFile('background');
+            $image_coordinates  = $this->request->getPost('image_coordinates');
+            $name_coordinates   = $this->request->getPost('name_coordinates');
+            $email_coordinates  = $this->request->getPost('email_coordinates');
+            $mobile_coordinates = $this->request->getPost('mobile_coordinates');
+            $text_color         = $this->request->getPost('text_color');
+
+            $data = [
+                'name'              => $name,
+                'image_coordinates' => $image_coordinates,
+                'name_coordinates'  => $name_coordinates,
+                'email_coordinates' => $email_coordinates,
+                'mobile_coordinates' => $mobile_coordinates,
+                'text_color'        => $text_color,
+            ];
+
+            if (empty($background)) {
+                $res = $this->model->editTemplate($id, $data);
+            } else {
+                if (!$background->hasMoved()) {
+                    $filename = $background->getName();
+                    $background->move(FCPATH . 'assets/', $filename);
+
+                    $data['background'] = $filename;
+
+                    $res = $this->model->editTemplate($id, $data);
+                }
+            }
+            if ($res) echo 1;
+            else echo 0;
         }
     }
 
@@ -163,5 +220,15 @@ class Home extends BaseController
     {
         $template = $this->model->getTemplate($name);
         if (empty($template)) return;
+
+        return view('admin/edittemplate');
+    }
+
+    public function deleteTemplate()
+    {
+        $id = $this->request->getPost('id');
+
+        if ($this->model->deleteTemplate($id)) return 1;
+        else return 0;
     }
 }

@@ -40,6 +40,11 @@
         //     canvas.renderAll();
         // });
 
+        fabric.Image.fromURL("<?= base_url('public/assets/' . $details['background']) ?>", function(img) {
+            canvas.backgroundImage = img;
+            canvas.renderAll();
+        });
+
         let userImageCoordinates;
         let userNameCoordinates;
         let userNameColor = 'black';
@@ -112,6 +117,7 @@
 
         function saveTemplate() {
             const formData = new FormData();
+            formData.append('id', "<?= $details['id'] ?>")
             formData.append('name', 'independence')
             formData.append('background', document.getElementById('bg').files[0])
             formData.append('image_coordinates', JSON.stringify(userImageCoordinates))
@@ -119,7 +125,7 @@
             formData.append('email_coordinates', '')
             formData.append('mobile_coordinates', '')
             formData.append('text_color', userNameColor)
-            axios.post('<?= base_url() ?>/addTemplate', formData).then(res => {
+            axios.post('<?= base_url() ?>/editTemplate', formData).then(res => {
                 if (res.data) {
                     alert('added');
                 }
